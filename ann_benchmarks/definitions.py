@@ -35,10 +35,11 @@ def instantiate_algorithm(definition: Definition) -> BaseANN:
         The constructors for the algorithm definition are generally located at 
         ann_benchmarks/algorithms/*/module.py.
     """
+    print("i am in instantiate_algorithm")
     print(f"Trying to instantiate {definition.module}.{definition.constructor}({definition.arguments})")
     module = importlib.import_module(f"{definition.module}.module")
-    constructor = getattr(module, definition.constructor)
-    return constructor(*definition.arguments)
+    constructor = getattr(module, definition.constructor)  # 获取算法的构造函数
+    return constructor(*definition.arguments)   # definition.arguments 包含要传递给构造函数的参数 使用构造函数和提供的参数实例化算法对象。
 
 
 class InstantiationStatus(Enum):
@@ -50,17 +51,16 @@ class InstantiationStatus(Enum):
 
 def algorithm_status(definition: Definition) -> InstantiationStatus:
     """
-    Determine the instantiation status of the algorithm based on its python module and constructor.
+       根据算法的Python模块和构造函数确定算法的实例化状态。
 
-    Attempts to find the Python class constructor based on the definition's module path and 
-    constructor name.
+       尝试根据定义的模块路径和构造函数名称找到Python类构造函数。
 
-    Args:
-        definition (Definition): The algorithm definition containing module and constructor.
+       参数:
+           definition (Definition): 包含模块和构造函数的算法定义。
 
-    Returns:
-        InstantiationStatus: The status of the algorithm instantiation.
-    """
+       返回:
+           InstantiationStatus: 算法实例化的状态。
+       """
     try:
         module = importlib.import_module(f"{definition.module}.module")
         if hasattr(module, definition.constructor):
@@ -125,11 +125,13 @@ def _substitute_variables(arg: Any, vs: Dict[str, Any]) -> Any:
 
 def get_config_files(base_dir: str = "ann_benchmarks/algorithms") -> List[str]:
     """Get config files for all algorithms."""
+    '''返回的结果是一个列表，包含了所有的算法配置文件路径。'''
     config_files = glob.glob(os.path.join(base_dir, "*", "config.yml"))
     return list(
         set(config_files) - {f"{base_dir}/base/config.yml"}
     )
 
+'''
 def load_configs(point_type: str, base_dir: str = "ann_benchmarks/algorithms") -> Dict[str, Any]:
     """Load algorithm configurations for a given point_type."""
     config_files = get_config_files(base_dir=base_dir)
@@ -145,8 +147,42 @@ def load_configs(point_type: str, base_dir: str = "ann_benchmarks/algorithms") -
                 print(f"Error loading YAML from {config_file}: {e}")
     return configs
 
+def load_configs(point_type: str, base_dir: str = "ann_benchmarks/algorithms") -> Dict[str, Any]:
+    """Load algorithm configurations for a given point_type."""
+    #这个函数用于加载特定点类型的算法配置。它遍历算法配置文件夹中的所有配置文件，并将符合特定点类型的配置加载到一个字典中返回。
+    config_files = get_config_files(base_dir=base_dir)
+    configs = {}
+    for config_file in config_files:
+        with open(config_file, 'r') as stream:
+            try:
+                config_data = yaml.safe_load(stream)
+                if config_data is not None:  # 添加这行检查
+                    algorithm_name = os.path.basename(os.path.dirname(config_file))
+                    if point_type in config_data:
+                        configs[algorithm_name] = config_data[point_type]
+            except yaml.YAMLError as e:
+                print(f"Error loading YAML from {config_file}: {e}")
+    return configs
+'''
+def load_configs(point_type: str, base_dir: str = "ann_benchmarks/algorithms") -> Dict[str, Any]:
+    """Load algorithm configurations for a given point_type."""
+    config_files = get_config_files(base_dir=base_dir)
+    configs = {}
+    for config_file in config_files:
+        with open(config_file, 'r') as stream:
+            try:
+                config_data = yaml.safe_load(stream)
+                if config_data is not None:  # 添加这行检查
+                    algorithm_name = os.path.basename(os.path.dirname(config_file))
+                    if point_type in config_data:
+                        configs[algorithm_name] = config_data[point_type]
+            except yaml.YAMLError as e:
+                print(f"Error loading YAML from {config_file}: {e}")
+    return configs
+
 def _get_definitions(base_dir: str = "ann_benchmarks/algorithms") -> Dict[str, Dict[str, Any]]:
     """Load algorithm configurations for a given point_type."""
+    # 得到所有算法配置文件路径
     config_files = get_config_files(base_dir=base_dir)
     configs = {}
     for config_file in config_files:
@@ -218,12 +254,14 @@ def list_algorithms(base_dir: str = "ann_benchmarks/algorithms") -> None:
     print("The following algorithms are supported...", definitions)
     for algorithm in definitions:
         print('\t... for the algorithm "%s"...' % algorithm)
+        if definitions[algorithm] is None:
+            print("\t\tNo definitions found for this algorithm.")
+        else:
+            for point_type in definitions[algorithm]:
+                print('\t\t... and the point type "%s", metrics: ' % point_type)
 
-        for point_type in definitions[algorithm]:
-            print('\t\t... and the point type "%s", metrics: ' % point_type)
-
-            for metric in definitions[algorithm][point_type]:
-                print("\t\t\t%s" % metric)
+                for metric in definitions[algorithm][point_type]:
+                    print("\t\t\t%s" % metric)
 
 
 def generate_arg_combinations(run_group: Dict[str, Any], arg_type: str) -> List:
@@ -342,6 +380,7 @@ def create_definitions_from_algorithm(name: str, algo: Dict[str, Any], dimension
             )
     return definitions
 
+#根据指定的数据集维度和参数，获取所有可用算法的定义，并将它们组合成一个列表返回。
 def get_definitions(
     dimension: int, 
     point_type: str = "float", 
@@ -357,6 +396,5 @@ def get_definitions(
         definitions.extend(
             create_definitions_from_algorithm(name, algo, dimension, distance_metric, count)
         )
-        
 
     return definitions

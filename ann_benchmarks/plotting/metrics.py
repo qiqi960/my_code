@@ -113,7 +113,7 @@ all_metrics = {
             "mean"
         ],  # noqa
         "worst": float("-inf"),
-        "lim": [0.0, 1.03],
+        "lim": [0, 1.03],
     },
     "epsilon": {
         "description": "Epsilon 0.01 Recall",

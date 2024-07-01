@@ -9,6 +9,8 @@ from typing import Any, Callable, Dict, Tuple
 
 def download(source_url: str, destination_path: str) -> None:
     """
+     从给定的源 URL 下载文件到指定的目标路径，仅当目标路径上不存在该文件时才执行下载
+
     Downloads a file from the provided source URL to the specified destination path
     only if the file doesn't already exist at the destination.
     
@@ -23,6 +25,7 @@ def download(source_url: str, destination_path: str) -> None:
 
 def get_dataset_fn(dataset_name: str) -> str:
     """
+    根据给定的数据集名称返回数据集的完整文件路径。如果 "data" 目录不存在，将创建该目录。
     Returns the full file path for a given dataset name in the data directory.
     
     Args:
@@ -33,11 +36,14 @@ def get_dataset_fn(dataset_name: str) -> str:
     """
     if not os.path.exists("data"):
         os.mkdir("data")
+    # os.path.join("data", f"{dataset_name}.hdf5")是一个用于构建文件路径的函数调用，
+    # 其中"data"是目录名称，f"{dataset_name}.hdf5"是文件名。这个函数会将目录和文件名连接起来，生成一个完整的文件路径。
     return os.path.join("data", f"{dataset_name}.hdf5")
 
 
 def get_dataset(dataset_name: str) -> Tuple[h5py.File, int]:
     """
+     获取数据集，如果本地不存在该数据集 则从已知的 URL 下载。返回打开的 HDF5 文件对象和数据集的维度。
     Fetches a dataset by downloading it from a known URL or creating it locally
     if it's not already present. The dataset file is then opened for reading, 
     and the file handle and the dimension of the dataset are returned.
@@ -84,6 +90,7 @@ def write_output(train: numpy.ndarray, test: numpy.ndarray, fn: str, distance: s
     """
     from ann_benchmarks.algorithms.bruteforce.module import BruteForceBLAS
 
+    #这段代码使用了 h5py 库创建了一个 HDF5 文件，并将训练集和测试集的相关信息存储其中
     with h5py.File(fn, "w") as f:
         f.attrs["type"] = "dense"
         f.attrs["distance"] = distance
@@ -116,6 +123,7 @@ def write_output(train: numpy.ndarray, test: numpy.ndarray, fn: str, distance: s
 
 
 """
+参数:train和test是索引数组的数组
 param: train and test are arrays of arrays of indices.
 """
 
@@ -181,6 +189,7 @@ def write_sparse_output(train: numpy.ndarray, test: numpy.ndarray, fn: str, dist
 
 def train_test_split(X: numpy.ndarray, test_size: int = 10000, dimension: int = None) -> Tuple[numpy.ndarray, numpy.ndarray]:
     """
+    一个用于将数据集划分为训练集和测试集的函数
     Splits the provided dataset into a training set and a testing set.
     
     Args:
@@ -206,14 +215,19 @@ def glove(out_fn: str, d: int) -> None:
     url = "http://nlp.stanford.edu/data/glove.twitter.27B.zip"
     fn = os.path.join("data", "glove.twitter.27B.zip")
     download(url, fn)
+    # 使用 zipfile 解压下载的文件
     with zipfile.ZipFile(fn) as z:
         print("preparing %s" % out_fn)
         z_fn = "glove.twitter.27B.%dd.txt" % d
         X = []
+        # 逐行读取文件，并将每一行的嵌入向量提取出来
+        # "提取嵌入向量"是为了利用这些预训练的语义表示来增强模型性能，而不是直接使用原始的文本数据
         for line in z.open(z_fn):
             v = [float(x) for x in line.strip().split()[1:]]
             X.append(numpy.array(v))
+        # 使用 train_test_split 函数将数据集分为训练集和测试集
         X_train, X_test = train_test_split(X)
+        # 使用 write_output 函数将训练集和测试集写入 HDF5 文件，并使用 Angular 距离
         write_output(numpy.array(X_train), numpy.array(X_test), out_fn, "angular")
 
 

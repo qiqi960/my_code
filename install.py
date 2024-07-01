@@ -16,7 +16,8 @@ def build(library, args):
 
     try:
         subprocess.check_call(
-            "docker build %s --rm -t ann-benchmarks-%s -f" " ann_benchmarks/algorithms/%s/Dockerfile  ." % (q, library, library),
+            "docker build %s --rm -t ann-benchmarks-%s -f" " ann_benchmarks/algorithms/%s/Dockerfile  ." % (
+            q, library, library),
             shell=True,
         )
         return {library: "success"}
@@ -37,11 +38,11 @@ if __name__ == "__main__":
 
     print("Building base image...")
     subprocess.check_call(
-         "docker build \
-         --rm -t ann-benchmarks -f ann_benchmarks/algorithms/base/Dockerfile .",
-         shell=True,
-     )
-    
+        "docker build \
+        --rm -t ann-benchmarks -f ann_benchmarks/algorithms/base/Dockerfile .",
+        shell=True,
+    )
+
     if args.algorithm:
         tags = [args.algorithm]
     elif os.getenv("LIBRARY"):

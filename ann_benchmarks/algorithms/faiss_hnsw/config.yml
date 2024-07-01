@@ -2,8 +2,8 @@ float:
   any:
   - base_args: ['@metric']
     constructor: FaissHNSW
-    disabled: false
-    docker_tag: ann-benchmarks-faiss
+    disabled: true
+    docker_tag: ann-benchmarks-faiss_hnsw
     module: ann_benchmarks.algorithms.faiss_hnsw
     name: hnsw(faiss)
     run_groups:

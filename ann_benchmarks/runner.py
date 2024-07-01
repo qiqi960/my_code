@@ -19,7 +19,7 @@ from .distance import dataset_transform, metrics
 from .results import store_results
 
 
-def run_individual_query(algo: BaseANN, X_train: numpy.array, X_test: numpy.array, distance: str, count: int, 
+def run_individual_query(algo: BaseANN, X_train: numpy.array, X_test: numpy.array, distance: str, count: int,
                          run_count: int, batch: bool) -> Tuple[dict, list]:
     """Run a search query using the provided algorithm and report the results.
 
@@ -36,7 +36,7 @@ def run_individual_query(algo: BaseANN, X_train: numpy.array, X_test: numpy.arra
         tuple: A tuple with the attributes of the algorithm run and the results.
     """
     prepared_queries = (batch and hasattr(algo, "prepare_batch_query")) or (
-        (not batch) and hasattr(algo, "prepare_query")
+            (not batch) and hasattr(algo, "prepare_query")
     )
 
     best_search_time = float("inf")
@@ -53,7 +53,7 @@ def run_individual_query(algo: BaseANN, X_train: numpy.array, X_test: numpy.arra
 
             Returns:
                 List[Tuple[float, List[Tuple[int, float]]]]: Tuple containing
-                    1. Total time taken for each query 
+                    1. Total time taken for each query
                     2. Result pairs consisting of (point index, distance to candidate data )
             """
             if prepared_queries:
@@ -87,7 +87,7 @@ def run_individual_query(algo: BaseANN, X_train: numpy.array, X_test: numpy.arra
 
             Returns:
                 List[Tuple[float, List[Tuple[int, float]]]]: List of tuples, each containing
-                    1. Total time taken for each query 
+                    1. Total time taken for each query
                     2. Result pairs consisting of (point index, distance to candidate data )
             """
             # TODO: consider using a dataclass to represent return value.
@@ -140,9 +140,9 @@ def run_individual_query(algo: BaseANN, X_train: numpy.array, X_test: numpy.arra
 
 
 def load_and_transform_dataset(dataset_name: str) -> Tuple[
-        Union[numpy.ndarray, List[numpy.ndarray]],
-        Union[numpy.ndarray, List[numpy.ndarray]],
-        str]:
+    Union[numpy.ndarray, List[numpy.ndarray]],
+    Union[numpy.ndarray, List[numpy.ndarray]],
+    str]:
     """Loads and transforms the dataset.
 
     Args:
@@ -195,6 +195,7 @@ def run(definition: Definition, dataset_name: str, count: int, run_count: int, b
         run_count (int): The number of runs.
         batch (bool): If true, runs in batch mode.
     """
+    print("i am in run")
     algo = instantiate_algorithm(definition)
     assert not definition.query_argument_groups or hasattr(
         algo, "set_query_arguments"
@@ -217,7 +218,7 @@ function"""
             print(f"Running query argument group {pos} of {len(query_argument_groups)}...")
             if query_arguments:
                 algo.set_query_arguments(*query_arguments)
-            
+
             descriptor, results = run_individual_query(algo, X_train, X_test, distance, count, run_count, batch)
 
             descriptor.update({
@@ -231,8 +232,9 @@ function"""
     finally:
         algo.done()
 
+
 def run_from_cmdline():
-    """Calls the function `run` using arguments from the command line. See `ArgumentParser` for 
+    """Calls the function `run` using arguments from the command line. See `ArgumentParser` for
     arguments, all run it with `--help`.
     """
     parser = argparse.ArgumentParser(
@@ -253,7 +255,7 @@ def run_from_cmdline():
     )
     parser.add_argument(
         "--runs",
-        help="Number of times to run the algorihm. Will use the fastest run-time over the bunch.",
+        help="Number of times to run the algorithm. Will use the fastest run-time over the bunch.",
         required=True,
         type=int,
     )
@@ -267,7 +269,8 @@ def run_from_cmdline():
     args = parser.parse_args()
 
     algo_args = json.loads(args.build)
-    print(algo_args)
+    print("i am in run_from_cmdline1")
+    print(algo_args)  # eg ['angular', 200]
     query_args = [json.loads(q) for q in args.queries]
 
     definition = Definition(
@@ -279,18 +282,19 @@ def run_from_cmdline():
         query_argument_groups=query_args,
         disabled=False,
     )
+    print("i am in run_from_cmdline2")
     run(definition, args.dataset, args.count, args.runs, args.batch)
 
 
 def run_docker(
-    definition: Definition,
-    dataset: str,
-    count: int,
-    runs: int,
-    timeout: int,
-    batch: bool,
-    cpu_limit: str,
-    mem_limit: Optional[int] = None
+        definition: Definition,
+        dataset: str,
+        count: int,
+        runs: int,
+        timeout: int,
+        batch: bool,
+        cpu_limit: str,
+        mem_limit: Optional[int] = None
 ) -> None:
     """Runs `run_from_cmdline` within a Docker container with specified parameters and logs the output.
 
@@ -316,9 +320,8 @@ def run_docker(
     cmd += [json.dumps(qag) for qag in definition.query_argument_groups]
 
     client = docker.from_env()
-    if mem_limit is None:
-        mem_limit = psutil.virtual_memory().available
-
+    mem_limit = "50g"
+    print("i am in run_docker")
     container = client.containers.run(
         definition.docker_tag,
         cmd,
@@ -333,10 +336,15 @@ def run_docker(
     )
     logger = logging.getLogger(f"annb.{container.short_id}")
 
+    # eg.  Created container 2408cd3a985e: CPU limit 1, mem limit 4g, timeout 7200,
+    # command ['--dataset', 'glove-100-angular', '--algorithm', 'annoy', '--module', 'ann_benchmarks.algorithms.annoy',
+    # '--constructor', 'Annoy', '--runs', '5', '--count', '10', '["angular", 200]', '[100]', '[200]', '[400]', '[1000]',
+    # '[2000]', '[4000]', '[10000]', '[20000]', '[40000]', '[100000]', '[200000]', '[400000]']
     logger.info(
         "Created container %s: CPU limit %s, mem limit %s, timeout %d, command %s"
         % (container.short_id, cpu_limit, mem_limit, timeout, cmd)
     )
+    print("run_docker terminate!")
 
     def stream_logs():
         for line in container.logs(stream=True):
@@ -357,9 +365,9 @@ def run_docker(
 
 
 def _handle_container_return_value(
-    return_value: Union[Dict[str, Union[int, str]], int],
-    container: docker.models.containers.Container,
-    logger: logging.Logger
+        return_value: Union[Dict[str, Union[int, str]], int],
+        container: docker.models.containers.Container,
+        logger: logging.Logger
 ) -> None:
     """Handles the return value of a Docker container and outputs error and stdout messages (with colour).
 
